@@ -1,4 +1,7 @@
-class Vector {
-    public x: number = NaN;
-    public y: number = NaN;
+/**
+ * Represents a 2d vector
+ */
+type Vector = {
+    x: number;
+    y: number;
 }

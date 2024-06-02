@@ -1,4 +1,4 @@
-import { addVectors, rotateVector, substractVectors } from "./vector-utils";
+import { addVectors, rotateVector, substractVectors } from "./vector-utils.js";
 
 /**
  * Translate a a position (x,y) from the global
