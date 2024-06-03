@@ -114,14 +114,20 @@ export class World {
     }
 
     /**
-     * 
+     * Solves the set of constraints and bodies.
+     * Updates the bodies to their solved positions
+     * @param solver (optional) `nr-solver.Solver`
+     * @throws UnableToSolveError if solver is unable to solve the system.
      */
-    solve(): World {
+    solve(solver?: Solver): World {
+        if(!solver) {
+            solver = new Solver();
+        }
+
         this.loadX0andIndices(); // fill x0 vector and indicees
         const nBodies = Object.keys(this.bodies).length;
         const n = 3*nBodies - this.dof;
         let xVec = this.x0.subset(index(range(0,n), 0));
-        const solver = new Solver();
         const sol = solver.solve(this.f, xVec);
         if(!sol.solved()) {
             throw new UnableToSolveError(sol.message());
@@ -136,6 +142,9 @@ export class World {
         return this;
     }
 
+    /**
+     * Returns object where keys are bodies ids, values are bodies intances.
+     */
     getBodies() {
         return this.bodies;
     }
