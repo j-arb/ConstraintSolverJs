@@ -1,18 +1,44 @@
 {
-  "type": "module",
-  "name": "constaint-solver.js",
+  "name": "constraint-solver-js",
   "version": "0.0.0",
-  "description": "2D rigid body constraint solver written in typescript",
+  "description": "2D rigid body constraint solver written in typescript.",
+  "keywords": [
+    "rigid-body",
+    "constraint-solver",
+    "physics",
+    "TypeScript",
+    "js",
+    "ts",
+    "javascript",
+    "2D",
+    "solver"
+  ],
+  "homepage": "https://github.com/j-arb/ConstraintSolverJs",
+  "license": "GPL-3.0-or-later",
+  "author": {
+    "name": "Juan Esteban Arboleda Restrepo",
+    "email": "juanesteban.arboledagc@gmail.com",
+    "url": "https://github.com/j-arb"
+  },
+  "files": [
+    "/build",
+    "/types"
+  ],
   "main": "build/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:j-arb/ConstraintSolverJs.git"
+  },
   "types": "types/index.d.ts",
+  "type": "module",
   "devDependencies": {
     "@types/mathjs": "^9.4.2",
     "@types/uuid": "^9.0.8",
     "typescript": "^5.4.5"
   },
   "dependencies": {
+    "fsolve-js": "^1.0.0",
     "mathjs": "^13.0.0",
-    "nr-solver": "^0.0.8",
     "uuid": "^9.0.1"
   }
 }
