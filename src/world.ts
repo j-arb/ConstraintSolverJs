@@ -2,7 +2,7 @@ import { Matrix, fix, index, matrix, range, zeros } from "mathjs";
 import { Body } from "./body.js";
 import { FixedConstraint } from "./fixed-constraint.js";
 import { RotConstraint } from "./rot-constraint.js";
-import { Solver } from "nr-solver";
+import { Solver } from "fsolve-js";
 
 /**
  * Set of bodies, rotational constraints
@@ -116,7 +116,7 @@ export class World {
     /**
      * Solves the set of constraints and bodies.
      * Updates the bodies to their solved positions
-     * @param solver (optional) `nr-solver.Solver`
+     * @param solver (optional) `fsolve-js.Solver`
      * @throws UnableToSolveError if solver is unable to solve the system.
      */
     solve(solver?: Solver): World {
