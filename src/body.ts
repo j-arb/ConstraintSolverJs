@@ -23,7 +23,7 @@ export class Body {
 
     /**
      * Body constructor
-     * @param id body id
+     * @param id body id. No two bodies should have the same ID.
      * @param x Body's center of mass x position
      * @param y Body's center of mass y position
      * @param theta Body's rotation in radians
