@@ -37,7 +37,7 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "fsolve-js": "^1.0.0",
+    "fsolve-js": "^1.0.1",
     "mathjs": "^13.0.0",
     "uuid": "^9.0.1"
   }

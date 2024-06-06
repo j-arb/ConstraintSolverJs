@@ -1,8 +1,8 @@
-import { Matrix, fix, index, matrix, range, zeros } from "mathjs";
+import { Matrix, abs, fix, index, matrix, number, range, sign, sort, string, zeros } from "mathjs";
 import { Body } from "./body.js";
 import { FixedConstraint } from "./fixed-constraint.js";
 import { RotConstraint } from "./rot-constraint.js";
-import { Solver } from "fsolve-js";
+import { Differentiator, Solver } from "fsolve-js";
 
 /**
  * Set of bodies, rotational constraints
@@ -12,6 +12,7 @@ export class World {
     private rotConstraints: RotConstraint[];
     private fixConstraints: FixedConstraint[];
     private bodies: { [id: string]: Body };
+    private bodiesLst: Body[] = [];
     private errors: string[] = [];
     private indices: { [bodyId: string]: {x: number, y: number, theta: number} } = {};
     private x0: Matrix;
@@ -32,34 +33,14 @@ export class World {
         this.bodies = {}; // Initialize bodies dictionary
         this.rotConstraints = rotConstraints; // Initialize rotConstraints
         this.fixConstraints = fixConstraints; // Initialize fixConstraints
-        this.loadBodies(); // Fill bodies dictionary
-        const nBodies = Object.keys(this.bodies).length;
-        this.x0 = matrix(zeros([nBodies, 1])); // Initialize x0 vector
+        this.loadBodies(); // Fill bodies dictionary and bodies list
+        this.x0 = matrix(zeros([this.bodiesLst.length * 3, 1])); // Initialize x0 vector
+
         this.dof = this.validateDegsOfFreedom(); // validate if system has enough dof
 
         if (this.errors.length > 0) {
             throw new WorldSetupError(this.errors);
         }
-    }
-
-    /**
-     * Loops through bodies to fill x0 vector
-     * and asign vector's indicees to each body.
-     */
-    private loadX0andIndices() {
-        const bIds = Object.keys(this.bodies);
-        bIds.forEach((id, i) => {
-            const body = this.bodies[id];
-
-            // set up indices
-            const startIndex = 3*i;
-            this.indices[id] = {x: startIndex, y: startIndex + 1, theta: startIndex + 2};
-
-            // fill x0
-            this.x0.set([startIndex, 0],     body.x);
-            this.x0.set([startIndex + 1, 0], body.y);
-            this.x0.set([startIndex + 2, 0], body.theta);
-        });
     }
 
     /**
@@ -83,6 +64,8 @@ export class World {
             const body = fc.body;
             this.bodies[body.id] = body;
         });
+
+        this.bodiesLst = Object.values(this.bodies);
     }
 
     /**
@@ -124,22 +107,112 @@ export class World {
             solver = new Solver();
         }
 
-        this.loadX0andIndices(); // fill x0 vector and indicees
-        const nBodies = Object.keys(this.bodies).length;
+        // load initial x0 vector
+        const nBodies = this.bodiesLst.length;
         const n = 3*nBodies - this.dof;
-        let xVec = this.x0.subset(index(range(0,n), 0));
-        const sol = solver.solve(this.f, xVec);
+        this.loadInitialX0AndIndices();
+
+        // Select variables to solve
+        const diff = new Differentiator();
+        const J = diff.jacobian(this.f, this.x0);
+        const selectedIndices = this.selectSolverVariableIndices(J);
+
+        // Rearrange x0 based on selected variables
+        const newX0 = this.loadIndicesDictAndGetX0(selectedIndices);
+        this.x0 = newX0;
+        const solverX = newX0.subset(index(range(0,n), 0));
+
+        // Solve
+        const sol = solver.solve(this.f, solverX);
         if(!sol.solved()) {
             throw new UnableToSolveError(sol.message());
         }
 
-        const bodies = Object.values(this.bodies);
-
-        bodies.forEach((body) => {
+        // Update bodies
+        this.bodiesLst.forEach((body) => {
             this.setBodyPosition(sol.getX(), body);
         });
 
         return this;
+    }
+
+    private loadIndicesDictAndGetX0(selectedIndices: {[index: number]: boolean}): Matrix {
+        const x0Length = this.bodiesLst.length * 3;
+        const x0 = matrix(zeros([x0Length, 0]));
+        let xVecIndex = 0;
+        let constIndex = x0Length;
+        this.bodiesLst.forEach((body, bodyIndex) => {
+            const xIndex = bodyIndex * 3;
+            const yIndex = bodyIndex * 3 + 1;
+            const tIndex = bodyIndex * 3 + 2;
+            this.indices[body.id] = {x: NaN, y: NaN, theta: NaN};
+            if(selectedIndices[xIndex]) {
+                this.indices[body.id].x = xVecIndex++;
+            } else {
+                this.indices[body.id].x = constIndex++;
+            }
+            x0.set([this.indices[body.id].x, 0], body.x);
+
+            if(selectedIndices[yIndex]) {
+                this.indices[body.id].y = xVecIndex++;
+            } else {
+                this.indices[body.id].y = constIndex++;
+            }
+            x0.set([this.indices[body.id].y, 0], body.y);
+
+            if(selectedIndices[tIndex]) {
+                this.indices[body.id].theta = xVecIndex++;
+            } else {
+                this.indices[body.id].theta = constIndex++;
+            }
+            x0.set([this.indices[body.id].theta, 0], body.theta);
+        });
+
+        return x0;
+    }
+
+    private loadInitialX0AndIndices() {
+        const bIds = Object.keys(this.bodies);
+        bIds.forEach((id, i) => {
+            const body = this.bodies[id];
+
+            // set up indices
+            const startIndex = 3*i;
+            this.indices[id] = {x: startIndex, y: startIndex + 1, theta: startIndex + 2};
+
+            // fill x0
+            this.x0.set([startIndex, 0],     body.x);
+            this.x0.set([startIndex + 1, 0], body.y);
+            this.x0.set([startIndex + 2, 0], body.theta);
+        });
+    }
+
+    private selectSolverVariableIndices(J: Matrix): {[index: number]: boolean} {
+        const m = J.size()[1];
+        const rowSums = this.sumRows(abs(sign(J)));
+        rowSums.sort((a, b) => {
+            return a.sum - b.sum;
+        });
+
+        const selectedIndicesDict: {[index: number]: boolean} = {};
+
+        rowSums.forEach((row) => {
+            const i = row.i;
+            let selectedj = -1;
+            for(let j = 0; j < m; j++) {
+                const absJij = Math.abs(J.get([i, j]));
+                if(absJij > 0 && (!selectedIndicesDict[j])) {
+                    selectedj = j;
+                    break;
+                }
+            }
+            if(selectedj === -1) {
+                throw new UnableToSolveError("Unale to find enough independent variables to solve the system");
+            }
+            selectedIndicesDict[selectedj] = true;
+        });
+
+        return selectedIndicesDict;
     }
 
     /**
@@ -150,7 +223,7 @@ export class World {
     }
 
     private f = (xVec: Matrix): Matrix => {
-        const n = xVec.size()[0];
+        const n = this.rotConstraints.length * 2 + this.fixConstraints.length * 2;
         const y = matrix(zeros([n, 1]));
         let i = 0;
         this.rotConstraints.forEach((rc) => {
@@ -195,19 +268,19 @@ export class World {
         const indices = this.indices[body.id];
         const ret = {x: 0, y: 0, theta: 0}
         if(indices.x > maxIndex) {
-            ret.x = this.x0.get([indices.x, 0]);
+            ret.x = this.x0!.get([indices.x, 0]);
         } else {
             ret.x = xVec.get([indices.x, 0]);
         }
 
         if(indices.y > maxIndex) {
-            ret.y = this.x0.get([indices.y, 0]);
+            ret.y = this.x0!.get([indices.y, 0]);
         } else {
             ret.y = xVec.get([indices.y, 0]);
         }
 
         if(indices.theta > maxIndex) {
-            ret.theta = this.x0.get([indices.theta, 0]);
+            ret.theta = this.x0!.get([indices.theta, 0]);
         } else {
             ret.theta = xVec.get([indices.theta, 0]);
         }
@@ -229,6 +302,21 @@ export class World {
         if(indices.theta <= maxIndex) {
             body.theta = solVec.get([indices.theta, 0]);
         }
+    }
+
+    private sumRows(mat: Matrix): {sum: number, i: number}[] {
+        const n = mat.size()[0];
+        const m = mat.size()[1];
+        const ret = [];
+        for(let i = 0; i < n; i++) {
+            let sum = 0;
+            for(let j = 0; j < m; j++) {
+                sum += mat.get([i, j]);
+            } 
+            ret.push({sum: sum, i: i});
+        }
+
+        return ret;
     }
 }
 
