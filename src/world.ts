@@ -202,7 +202,7 @@ export class World {
         const indices = this.indices[body.id];
         const ret = {x: 0, y: 0, theta: 0}
         ret.x = xVec.get([indices.x, 0]);
-        ret.y = this.x.get([indices.y, 0]);
+        ret.y = xVec.get([indices.y, 0]);
         ret.theta = xVec.get([indices.theta, 0]);
 
         return ret;

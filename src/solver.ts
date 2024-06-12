@@ -67,6 +67,7 @@ export class Solver {
         let error = Infinity;
         let iter = 0;
         const initialTime = Date.now();
+        // const selIndices = this.selectIndices(f, x);
 
 
         while (error >= this.stopError) {
@@ -141,23 +142,24 @@ export class Solver {
 
         rowSums.forEach((row) => {
             const i = row.i;
-            let selectedj = -1;
+            let selectedjs = [];
             for(let j = 0; j < m; j++) {
                 const absJij = Math.abs(J.get([i, j]));
                 let max = 0;
                 if(absJij > max && (!selectedIndicesDict[j])) {
-                    selectedj = j;
+                    selectedjs.push(j);
                     max = absJij;
                 }
             }
-            if(selectedj === -1) {
+            if(selectedjs.length === 0) {
                 throw new Error("Unale to find enough independent variables to solve the system.");
             }
+            const selectedj = selectedjs[Math.floor(Math.random() * selectedjs.length)];
             selectedIndicesDict[selectedj] = true;
             selectedIndices.push(selectedj);
-            selectedIndices.sort();
         });
-
+            
+        selectedIndices.sort();
         return selectedIndices;
     }
 
