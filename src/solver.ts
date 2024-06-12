@@ -67,11 +67,11 @@ export class Solver {
         let error = Infinity;
         let iter = 0;
         const initialTime = Date.now();
-        // const selIndices = this.selectIndices(f, x);
+        const selIndices = this.selectIndices(f, x);
 
 
         while (error >= this.stopError) {
-            const selIndices = this.selectIndices(f, x);
+            // const selIndices = this.selectIndices(f, x);
             const y = f(x);
             const J = this.diff.jacobian(f, x);
             const smallJ = J.subset(index(range(0, m), selIndices))
@@ -142,19 +142,21 @@ export class Solver {
 
         rowSums.forEach((row) => {
             const i = row.i;
-            let selectedjs = [];
+            // let selectedjs = [];
+            let selectedj = -1;
             for(let j = 0; j < m; j++) {
                 const absJij = Math.abs(J.get([i, j]));
                 let max = 0;
                 if(absJij > max && (!selectedIndicesDict[j])) {
-                    selectedjs.push(j);
+                    // selectedjs.push(j);
+                    selectedj = j;
                     max = absJij;
                 }
             }
-            if(selectedjs.length === 0) {
+            if(selectedj === -1) {
                 throw new Error("Unale to find enough independent variables to solve the system.");
             }
-            const selectedj = selectedjs[Math.floor(Math.random() * selectedjs.length)];
+            // const selectedj = selectedjs[Math.floor(Math.random() * selectedjs.length)];
             selectedIndicesDict[selectedj] = true;
             selectedIndices.push(selectedj);
         });
