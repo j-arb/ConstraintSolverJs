@@ -62,3 +62,29 @@ export function unitVector(vector: Vector): Vector {
         return {x: 0, y: 0};
     }
 }
+
+/**
+ * Returns vector's direction in radians.
+ * @param vector 
+ */
+export function vectorDirection(vector: Vector): number {
+    return Math.atan( (vector.y) / (vector.x) );
+}
+
+/**
+ * Return's vector magnitude and direction (in radians)
+ * @param vector 
+ * @returns Object with mangitude key and dir key.
+ */
+export function vector2magAndDir(vector: Vector): {magnitude: number, dir: number} {
+    return {
+        magnitude: vectorMagnitude(vector),
+        dir: vectorDirection(vector)
+    }
+}
+
+export function magAndDir2Vector(magnitude: number, dir: number) {
+    const x = magnitude * Math.cos(dir);
+    const y = magnitude * Math.sin(dir);
+    return {x: x, y: y};
+}

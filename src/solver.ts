@@ -67,11 +67,14 @@ export class Solver {
         let error = Infinity;
         let iter = 0;
         const initialTime = Date.now();
-        const selIndices = this.selectIndices(f, x);
+        let selIndices: number[] = [];
 
 
         while (error >= this.stopError) {
-            // const selIndices = this.selectIndices(f, x);
+            // Update selected indices every 10 iterations
+            if(iter % 10 === 0) {
+                selIndices = this.selectIndices(f, x);
+            }
             const y = f(x);
             const J = this.diff.jacobian(f, x);
             const smallJ = J.subset(index(range(0, m), selIndices))
@@ -83,7 +86,13 @@ export class Solver {
             }
 
             const b = multiply(y, -1);
-            const invJ = inv(smallJ);
+            let invJ = smallJ;
+            try {
+                invJ = inv(smallJ);
+            } catch (e) {
+                selIndices = this.selectIndices(f, x);
+                continue;
+            }
             const h = multiply(invJ, b);
             smallX = add(smallX, h);
             // update x
@@ -142,21 +151,21 @@ export class Solver {
 
         rowSums.forEach((row) => {
             const i = row.i;
-            // let selectedjs = [];
-            let selectedj = -1;
+            let selectedjs = [];
+            // let selectedj = -1;
             for(let j = 0; j < m; j++) {
                 const absJij = Math.abs(J.get([i, j]));
                 let max = 0;
                 if(absJij > max && (!selectedIndicesDict[j])) {
-                    // selectedjs.push(j);
-                    selectedj = j;
+                    selectedjs.push(j);
+                    // selectedj = j;
                     max = absJij;
                 }
             }
-            if(selectedj === -1) {
+            if(selectedjs.length === 0) {
                 throw new Error("Unale to find enough independent variables to solve the system.");
             }
-            // const selectedj = selectedjs[Math.floor(Math.random() * selectedjs.length)];
+            const selectedj = selectedjs[Math.floor(Math.random() * selectedjs.length)];
             selectedIndicesDict[selectedj] = true;
             selectedIndices.push(selectedj);
         });

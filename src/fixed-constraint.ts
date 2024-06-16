@@ -15,6 +15,6 @@ export class FixedConstraint {
     }
 
     f(x: number, y: number, theta: number): [number, number, number] {
-        return [x - this.x, y - this.y, theta - this.theta];
+        return [Math.pow(x - this.x, 5), Math.pow(y - this.y, 5), Math.pow(theta - this.theta, 5)];
     }
 }
